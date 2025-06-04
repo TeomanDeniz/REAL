@@ -1,5 +1,5 @@
 /******************************************************************************\
-# C - RTOS                                       #       Maximum Tension       #
+# C - REAL_TO_STRING                             #       Maximum Tension       #
 ################################################################################
 #                                                #      -__            __-     #
 # Teoman Deniz                                   #  :    :!1!-_    _-!1!:    : #
@@ -8,14 +8,40 @@
 # +.....................++.....................+ #   :!:: :!:!1:!:!::1:::!!!:  #
 # : C - Maximum Tension :: Create - 2025/05/31 : #   ::!::!!1001010!:!11!!::   #
 # :---------------------::---------------------: #   :!1!!11000000000011!!:    #
-# : License -           :: Update - 2025/05/31 : #    ::::!!!1!!1!!!1!!!::     #
+# : License - GNU       :: Update - 2025/06/04 : #    ::::!!!1!!1!!!1!!!::     #
 # +.....................++.....................+ #       ::::!::!:::!::::      #
 \******************************************************************************/
 
+/* *********************** [v] TI CGT CCS (PUSH) [v] ************************ */
+#ifdef __TI_COMPILER_VERSION__
+#	pragma diag_push /* TI CGT CCS COMPILER DIRECTIVES */
+#	pragma CHECK_MISRA("5.4") /* TAG NAMES SHALL BE A UNIQUE IDENTIFIER */
+#	pragma CHECK_MISRA("19.3") /*
+#		THE #INCLUDE DIRECTIVE SHALL BE FOLLOWED BY EITHER A <FILENAME> OR
+#		"FILENAME" SEQUENCE
+#	*/
+#endif /* __TI_COMPILER_VERSION__ */
+/* *********************** [^] TI CGT CCS (PUSH) [^] ************************ */
+
+/* *************************** [v] C++ (PUSH) [v] *************************** */
+#ifdef __cplusplus /* C++ */
+extern "C" {
+#endif /* __cplusplus */
+/* *************************** [^] C++ (PUSH) [^] *************************** */
+
+/* *************************** [v] MVS LINKER [v] *************************** */
+/* **** MVS LINKER DOES NOT SUPPORT EXTERNAL NAMES LARGER THAN 8 BYTES!! **** */
+// NOTE: TARGETING IBM MAINFRAME SYSTEMS (Z/OS)
+#ifdef __MVS__
+#	pragma map(REAL_TO_STRING, "RTOSMT01")
+#	pragma map(real_to_string, "RTOSMT02")
+#endif /* __MVS__ */
+/* *************************** [^] MVS LINKER [^] *************************** */
+
 /* **************************** [v] INCLUDES [v] **************************** */
 #include "../../REAL.h" /*
-# define REAL_SIZE
 #typedef REAL;
+#typedef real;
 #        */
 #include "../../LIBCMT/ENVIRONMENTS/KNR_STYLE.h" /*
 # define KNR_STYLE
@@ -23,16 +49,15 @@
 #include <stdlib.h> /*
 #typedef size_t;
 #   void *malloc(size_t);
-#   void free(void *);
 #        */
 /* **************************** [^] INCLUDES [^] **************************** */
 
 #ifndef KNR_STYLE /* STANDARD C */
 char
-	*RTOS(REAL NUMBER)
+	*REAL_TO_STRING(REAL NUMBER)
 #else /* K&R */
 char
-	*RTOS(NUMBER)
+	*REAL_TO_STRING(NUMBER)
 	REAL	NUMBER;
 #endif /* !KNR_STYLE */
 {
@@ -43,11 +68,10 @@ char
 		return ((char *)0);
 
 	NEGATIVE = (((((*NUMBER) & -16) >> 4) & 15) == 15);
-	RESULT = (char *)0;
 
-	if ((*NUMBER) == 15 || (*NUMBER) == -1)
+	if ((*NUMBER) == 15)
 	{
-		RESULT = (char *)malloc(2 * REAL_SIZE);
+		RESULT = (char *)malloc(2 * sizeof(char));
 
 		if (!RESULT)
 			return ((char *)0);
@@ -70,7 +94,7 @@ char
 			!(LOW_NIBBLE >= 0 && LOW_NIBBLE <= 9)
 		)
 		{
-			RESULT = (char *)malloc(4 * REAL_SIZE);
+			RESULT = (char *)malloc(4 * sizeof(char));
 
 			if (!RESULT)
 				return ((char *)0);
@@ -86,7 +110,7 @@ char
 		{
 			if (LOW_NIBBLE == 0)
 			{ // -INF
-				RESULT = (char *)malloc(5 * REAL_SIZE);
+				RESULT = (char *)malloc(5 * sizeof(char));
 
 				if (!RESULT)
 					return ((char *)0);
@@ -101,7 +125,7 @@ char
 
 			if (LOW_NIBBLE == 15)
 			{ // NAN
-				RESULT = (char *)malloc(4 * REAL_SIZE);
+				RESULT = (char *)malloc(4 * sizeof(char));
 
 				if (!RESULT)
 					return ((char *)0);
@@ -113,9 +137,9 @@ char
 				return (RESULT);
 			} // NAN
 		}
-		else if (HIGH_NIBBLE == 0 || LOW_NIBBLE == 0)
+		else if (HIGH_NIBBLE == 0 && LOW_NIBBLE == 0)
 		{ // INF
-			RESULT = (char *)malloc(4 * REAL_SIZE);
+			RESULT = (char *)malloc(4 * sizeof(char));
 
 			if (!RESULT)
 				return ((char *)0);
@@ -126,6 +150,25 @@ char
 			RESULT[3] = 0;
 			return (RESULT);
 		} // INF
+
+		if (
+			(HIGH_NIBBLE == 0 && LOW_NIBBLE != 15) ||
+			(HIGH_NIBBLE == 15 && LOW_NIBBLE == 0) ||
+			(HIGH_NIBBLE == 10) ||
+			(HIGH_NIBBLE == 15 && LOW_NIBBLE == 10)
+		)
+		{
+			RESULT = (char *)malloc(4 * sizeof(char));
+
+			if (!RESULT)
+				return ((char *)0);
+
+			RESULT[0] = 'E';
+			RESULT[1] = 'R';
+			RESULT[2] = 'R';
+			RESULT[3] = 0;
+			return (RESULT);
+		}
 	} // FIRST BYTE SPECIAL COMMANDS
 
 	{ // ALLOCATE RESULT
@@ -682,14 +725,28 @@ char
 	return (RESULT);
 }
 
+/* *************************** [v] LOWER CASE [v] *************************** */
 #ifndef KNR_STYLE /* STANDARD C */
 char
-	*rtos(real number)
+	*real_to_string(real number)
 #else /* K&R */
 char
-	*rtos(number)
+	*real_to_string(number)
 	real	number;
 #endif /* !KNR_STYLE */
 {
-	return (RTOS(number));
+	return (REAL_TO_STRING(number));
 }
+/* *************************** [^] LOWER CASE [^] *************************** */
+
+/* *************************** [v] C++ (POP) [v] **************************** */
+#ifdef __cplusplus /* C++ */
+}
+#endif /* __cplusplus */
+/* *************************** [^] C++ (POP) [^] **************************** */
+
+/* ************************ [v] TI CGT CCS (POP) [v] ************************ */
+#ifdef __TI_COMPILER_VERSION__
+#	pragma diag_pop /* TI CGT CCS COMPILER DIRECTIVES */
+#endif /* __TI_COMPILER_VERSION__ */
+/* ************************ [^] TI CGT CCS (POP) [^] ************************ */
