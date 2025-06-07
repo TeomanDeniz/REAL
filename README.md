@@ -14,7 +14,7 @@ git clone --recurse-submodules --depth 1 "git@github.com:TeomanDeniz/REAL.git"
 * [Class Table (C++)](#Class-Table-CPP)
 
 ## What is REAL
-**REAL** is a novel memory-based numeric format designed to overcome the limitations of traditional floating-point and integer representations. It enables exact arithmetic with extremely large or precise numbers—without any value loss. Whether you're working with massive integers like `1294182491824912471293172391247129658612.2328731` or tiny fractions, REAL guarantees full accuracy and fidelity.
+**REAL** is a memory-based numeric format designed to overcome the limitations of traditional floating-point and integer representations. It enables exact arithmetic with extremely large or precise numbers without any value loss. Whether you're working with massive integers like `1294182491824912471293172391247129658612.2328731` or tiny fractions, REAL guarantees full accuracy and fidelity.
 
 REAL encodes numbers in a custom binary format using nibbles (4-bit segments), supporting special values like `INF`, `-INF`, and `NAN`, as well as efficient digit compression. Repeating digits are packed using variable-size encoding blocks (12 to 24 bits), reducing memory usage significantly for repetitive sequences.
 
