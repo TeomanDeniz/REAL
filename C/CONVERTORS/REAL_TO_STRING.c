@@ -8,7 +8,7 @@
 # +.....................++.....................+ #   :!:: :!:!1:!:!::1:::!!!:  #
 # : C - Maximum Tension :: Create - 2025/05/31 : #   ::!::!!1001010!:!11!!::   #
 # :---------------------::---------------------: #   :!1!!11000000000011!!:    #
-# : License - GNU       :: Update - 2025/06/04 : #    ::::!!!1!!1!!!1!!!::     #
+# : License - GNU       :: Update - 2025/06/07 : #    ::::!!!1!!1!!!1!!!::     #
 # +.....................++.....................+ #       ::::!::!:::!::::      #
 \******************************************************************************/
 
@@ -40,6 +40,8 @@ extern "C" {
 
 /* **************************** [v] INCLUDES [v] **************************** */
 #include "../../REAL.h" /*
+# define REAL__RECURRING_DECIMAL_LIMIT
+# define REAL__FRACTION_LIMIT
 #typedef REAL;
 #typedef real;
 #        */
@@ -94,7 +96,7 @@ char
 			!(LOW_NIBBLE >= 0 && LOW_NIBBLE <= 9)
 		)
 		{
-			RESULT = (char *)malloc(4 * sizeof(char));
+			RESULT = (char *)malloc(5 * sizeof(char));
 
 			if (!RESULT)
 				return ((char *)0);
@@ -102,7 +104,8 @@ char
 			RESULT[0] = 'E';
 			RESULT[1] = 'R';
 			RESULT[2] = 'R';
-			RESULT[3] = 0;
+			RESULT[3] = '0';
+			RESULT[4] = 0;
 			return (RESULT);
 		}
 
@@ -152,13 +155,12 @@ char
 		} // INF
 
 		if (
-			(HIGH_NIBBLE == 0 && LOW_NIBBLE != 15) ||
 			(HIGH_NIBBLE == 15 && LOW_NIBBLE == 0) ||
 			(HIGH_NIBBLE == 10) ||
 			(HIGH_NIBBLE == 15 && LOW_NIBBLE == 10)
 		)
 		{
-			RESULT = (char *)malloc(4 * sizeof(char));
+			RESULT = (char *)malloc(5 * sizeof(char));
 
 			if (!RESULT)
 				return ((char *)0);
@@ -166,19 +168,22 @@ char
 			RESULT[0] = 'E';
 			RESULT[1] = 'R';
 			RESULT[2] = 'R';
-			RESULT[3] = 0;
+			RESULT[3] = '1';
+			RESULT[4] = 0;
 			return (RESULT);
 		}
 	} // FIRST BYTE SPECIAL COMMANDS
 
 	{ // ALLOCATE RESULT
 		register size_t	SIZE;
+		register size_t	SIZE_RDN;
 		register char	PACK;
 		REAL			ORIGINAL_NUMBER;
 
 		ORIGINAL_NUMBER = NUMBER;
 		SIZE = 1;
 		PACK = 0;
+		SIZE_RDN = 0;
 
 		if (NEGATIVE)
 		{
@@ -196,17 +201,17 @@ char
 		}
 
 		{
-			register int	EOR;
 			register int	NIBBLE;
+			register int	_1010; // FRACTION OR RDN
 			register char	PACK_VALUE;
 			register size_t	PACK_SIZE;
 
 			NIBBLE = 0;
-			EOR = 0;
 			PACK_VALUE = 10;
 			PACK_SIZE = 0;
+			_1010 = 0;
 
-			while (!EOR)
+			while (1)
 			{
 				register char	CURRENT_NIBBLE;
 
@@ -216,7 +221,7 @@ char
 					CURRENT_NIBBLE = (((*NUMBER) & -16) >> 4) & 15;
 
 				if (CURRENT_NIBBLE == 15 && PACK == 0)
-					EOR = 1;
+					break ;
 
 				if (PACK == 11)
 				{
@@ -228,7 +233,11 @@ char
 
 						if (PACK_SIZE != 0) // IF NOT STILL 0
 						{
-							SIZE += PACK_SIZE;
+							if (_1010 != 2)
+								SIZE += PACK_SIZE;
+							else
+								SIZE_RDN += PACK_SIZE;
+
 							PACK_SIZE = 0;
 						}
 
@@ -248,7 +257,11 @@ char
 
 							if (PACK_SIZE != 0) // IF NOT STILL 0
 							{
-								SIZE += PACK_SIZE;
+								if (_1010 != 2)
+									SIZE += PACK_SIZE;
+								else
+									SIZE_RDN += PACK_SIZE;
+
 								PACK_SIZE = 0;
 							}
 
@@ -274,7 +287,11 @@ char
 
 							if (PACK_SIZE != 0) // IF NOT STILL 0
 							{
-								SIZE += PACK_SIZE;
+								if (_1010 != 2)
+									SIZE += PACK_SIZE;
+								else
+									SIZE_RDN += PACK_SIZE;
+
 								PACK_SIZE = 0;
 							}
 
@@ -305,7 +322,11 @@ char
 
 							if (PACK_SIZE != 0) // IF NOT STILL 0
 							{
-								SIZE += PACK_SIZE;
+								if (_1010 != 2)
+									SIZE += PACK_SIZE;
+								else
+									SIZE_RDN += PACK_SIZE;
+
 								PACK_SIZE = 0;
 							}
 
@@ -339,8 +360,37 @@ char
 					)
 				)
 					PACK = CURRENT_NIBBLE;
+				else if (CURRENT_NIBBLE == 10)
+				{
+					if (_1010 == 0)
+					{
+						++SIZE;
+						_1010 = 1;
+					}
+					else if (_1010 == 1)
+						_1010 = 2;
+					else
+					{
+						RESULT = (char *)malloc(5 * sizeof(char));
+
+						if (!RESULT)
+							return ((char *)0);
+
+						RESULT[0] = 'E';
+						RESULT[1] = 'R';
+						RESULT[2] = 'R';
+						RESULT[3] = '2';
+						RESULT[4] = 0;
+						return (RESULT);
+					}
+				}
 				else
-					++SIZE;
+				{
+					if (_1010 != 2)
+						++SIZE;
+					else
+						++SIZE_RDN;
+				}
 
 				if (!NIBBLE)
 					NIBBLE = 1;
@@ -350,6 +400,18 @@ char
 					++NUMBER;
 				}
 			}
+		}
+
+		if (SIZE_RDN != 0)
+		{
+			SIZE_RDN += 3; // FOR "..."
+
+			if (SIZE_RDN > REAL__RECURRING_DECIMAL_LIMIT)
+				SIZE_RDN = SIZE_RDN * 2;
+			else
+				SIZE_RDN = SIZE_RDN * REAL__RECURRING_DECIMAL_LIMIT;
+
+			SIZE += SIZE_RDN;
 		}
 
 		RESULT = (char *)malloc((SIZE + 1) * sizeof(char *));
@@ -362,6 +424,8 @@ char
 
 	{ // PREPARE RESULT
 		register int	NIBBLE;
+		register int	_1010; // FRACTION OR RDN
+		register size_t	SIZE_RDN;
 		register char	PACK_VALUE;
 		register size_t	PACK_SIZE;
 		register size_t	INDEX;
@@ -372,6 +436,8 @@ char
 		PACK_SIZE = 0;
 		INDEX = 0;
 		PACK = 0;
+		_1010 = 0;
+		SIZE_RDN = 0;
 
 		if (NEGATIVE)
 		{
@@ -452,6 +518,7 @@ char
 					{
 						RESULT[INDEX] = '.';
 						++INDEX;
+						_1010 = 1;
 					}
 					break ;
 					case (11):
@@ -556,8 +623,14 @@ char
 					break ;
 					case (10):
 					{
-						RESULT[INDEX] = '.';
-						++INDEX;
+						if (_1010 == 0)
+						{
+							RESULT[INDEX] = '.';
+							++INDEX;
+							_1010 = 1;
+						}
+						else if (_1010 == 1)
+							_1010 = INDEX;
 					}
 					break ;
 					case (11):
@@ -582,7 +655,48 @@ char
 					break ;
 					case (15):
 					{
-						RESULT[INDEX] = 0;
+						if (_1010 > 1)
+						{
+							register size_t	FINISH_INDEX;
+							register size_t	REPEAT_ITERATE;
+							register size_t	SIZE_OF_RDN;
+							register size_t	RDN_INDEX;
+
+							FINISH_INDEX = INDEX;
+							SIZE_OF_RDN = FINISH_INDEX - _1010;
+							RDN_INDEX = _1010;
+
+							{
+								register size_t RDN_ORIGINAL_SIZE;
+
+								RDN_ORIGINAL_SIZE = SIZE_OF_RDN;
+
+								if (SIZE_OF_RDN > REAL__RECURRING_DECIMAL_LIMIT)
+									SIZE_OF_RDN = SIZE_OF_RDN * 2;
+								else
+									SIZE_OF_RDN = SIZE_OF_RDN *
+										REAL__RECURRING_DECIMAL_LIMIT;
+
+								if (SIZE_OF_RDN)
+									SIZE_OF_RDN -= RDN_ORIGINAL_SIZE;
+							}
+
+							while (SIZE_OF_RDN)
+							{
+								RESULT[INDEX] = RESULT[RDN_INDEX];
+								++RDN_INDEX;
+								++INDEX;
+								--SIZE_OF_RDN;
+
+								if (RDN_INDEX >= FINISH_INDEX)
+									RDN_INDEX = _1010;
+							}
+						}
+
+						RESULT[INDEX] = '.';
+						RESULT[INDEX + 1] = '.';
+						RESULT[INDEX + 2] = '.';
+						RESULT[INDEX + 3] = 0;
 						return (RESULT);
 					}
 					break ;

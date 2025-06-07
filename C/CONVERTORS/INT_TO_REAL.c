@@ -8,7 +8,7 @@
 # +.....................++.....................+ #   :!:: :!:!1:!:!::1:::!!!:  #
 # : C - Maximum Tension :: Create - 2025/06/04 : #   ::!::!!1001010!:!11!!::   #
 # :---------------------::---------------------: #   :!1!!11000000000011!!:    #
-# : License - GNU       :: Update - 2025/06/04 : #    ::::!!!1!!1!!!1!!!::     #
+# : License - GNU       :: Update - 2025/06/05 : #    ::::!!!1!!1!!!1!!!::     #
 # +.....................++.....................+ #       ::::!::!:::!::::      #
 \******************************************************************************/
 
@@ -132,7 +132,6 @@ REAL REGPARM(1)
 {
 	REAL				RESULT;
 	register int		NEGATIVE;
-	register size_t		SIZE;
 
 	if (NUMBER == 0)
 	{
@@ -153,13 +152,13 @@ REAL REGPARM(1)
 	else
 		NEGATIVE = 0;
 
-	SIZE = NEGATIVE + 1;
-
 	{ // ALLOCATE REAL
 		register int	NIBBLE;
 		register char	DIGIT;
 		register char	NUMBER_INDEX;
+		register size_t	SIZE;
 
+		SIZE = NEGATIVE + 1;
 		NIBBLE = NEGATIVE;
 		NUMBER_INDEX = 0;
 		DIGIT = NUM_INDEX(NUMBER, NUMBER_INDEX);

@@ -16,7 +16,7 @@ git clone --recurse-submodules --depth 1 "git@github.com:TeomanDeniz/REAL.git"
 ## What is REAL
 **REAL** is a novel memory-based numeric format designed to overcome the limitations of traditional floating-point and integer representations. It enables exact arithmetic with extremely large or precise numbers—without any value loss. Whether you're working with massive integers like `1294182491824912471293172391247129658612.2328731` or tiny fractions, REAL guarantees full accuracy and fidelity.
 
-REAL encodes numbers in a custom binary format using nibbles (4-bit segments), supporting special values like `INF`, `-INF`, `NAN`, and `-NAN`, as well as efficient digit compression. Repeating digits are packed using variable-size encoding blocks (12 to 24 bits), reducing memory usage significantly for repetitive sequences.
+REAL encodes numbers in a custom binary format using nibbles (4-bit segments), supporting special values like `INF`, `-INF`, and `NAN`, as well as efficient digit compression. Repeating digits are packed using variable-size encoding blocks (12 to 24 bits), reducing memory usage significantly for repetitive sequences.
 
 For example, these 6 bytes `10000001 11000000 11111101 00111010 00000101 01101111` are equals to:
 
@@ -66,7 +66,7 @@ It includes:
 | `0111` | 7                                           |
 | `1000` | 8                                           |
 | `1001` | 9                                           |
-| `1010` | `.` (Decimal Point)                         |
+| `1010` | `.` (Decimal Point) or RDN                  |
 | `1011` | Repetition Pack (4-bit size, 12-bit total)  |
 | `1100` | Repetition Pack (8-bit size, 16-bit total)  |
 | `1101` | Repetition Pack (12-bit size, 20-bit total) |
@@ -98,6 +98,42 @@ Example:
 PACK_N (4-bit version)
 ```
 
+### Recurring Decimal Notation (RDN)
+
+After use of Decimal Point (Aka: `.` or `1010`) to separate the integer from the fraction, `1010` is no longer just a decimal indicator.
+
+It also signals the beginning of a Recurring Decimal Notation (RDN) sequence when followed by a `~` token. The digits after `~` are interpreted as the repeating portion of the fractional part.
+
+Note: There's a macro named `REAL__RECURRING_DECIMAL_LIMIT` in the `REAL.h` file. The default fraction limit is 8. You can increase it by defining your own `REAL__RECURRING_DECIMAL_LIMIT` macro. If the RDN's digits are longer than `REAL__RECURRING_DECIMAL_LIMIT`, it's going to be printed only 2 times (the base sequence and one repetition)
+
+If you try to convert your REAL number to a string using the `REAL_TO_STRING()` function, the result may vary. `REAL_TO_STRING()` will always append `...` at the end to indicate infinite repetition.
+
+Examples:
+
+```yaml
+Encoded:
+0011 1010 1010 0011 1111 0000
+^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
+
+Breakdown:
+[3][.][~][3][EOR]
+
+Output:
+3.33333333...
+```
+
+```yaml
+Encoded:
+0000 1010 0101 1010 0001 0010 1111 0000
+^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
+
+Breakdown:
+[0][.][5][~][1][2][EOR]
+
+Output:
+0.51212121212121212...
+```
+
 ### End of Number
 
 REAL numbers are terminated with `1111` (EOR) to mark the end of a number.
@@ -110,7 +146,7 @@ Encoded:
 ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
 
 Breakdown:
-[8][1][PACK_4x0][2][3][.][5][5][1][EOR]
+[8][1][PACK 4x0][2][3][.][5][5][1][EOR]
 
 Output:
 81000023.551
@@ -122,7 +158,7 @@ Encoded:
 ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
 
 Breakdown:
-[0][.][PACK_62x0][2][1][0][1][EOR]
+[0][.][PACK 62x0][2][1][0][1][EOR]
 
 Output:
 0.00000000000000000000000000000000000000000000000000000000000002101
@@ -134,7 +170,7 @@ Encoded:
 ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
 
 Breakdown:
-[3][PACK_14x9][3][2][EOR]
+[3][PACK 14x9][3][2][EOR]
 
 Output:
 3999999999999932
@@ -146,10 +182,34 @@ Encoded:
 ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
 
 Breakdown:
-[7][PACK_507x1][.][PACK_14x1][2][EOR]
+[7][PACK 507x1][.][PACK 14x1][2][EOR]
 
 Output:
 711111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.111111111111112
+```
+
+```yaml
+Encoded:
+0011 1011 1001 1110 0011 0010 1010 1001 1000 1111
+^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
+
+Breakdown:
+[3][PACK 14x9][3][2][~][9][8][EOR]
+
+Output:
+39999999999999329898989898989898...
+```
+
+```yaml
+Encoded:
+0011 1010 1010 0011 1111 0000
+^^^^^^^^^ ^^^^^^^^^ ^^^^^^^^^
+
+Breakdown:
+[3][.][~][3][EOR]
+
+Output:
+3.33333333...
 ```
 
 ## Functions Table C
